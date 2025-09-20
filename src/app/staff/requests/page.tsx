@@ -35,8 +35,9 @@ const requestConfig = {
   'table_clean': { 
     icon: '🧽', 
     label: 'Table Cleaning',
-    color: '#3b82f6',
-    bgColor: '#eff6ff',
+    color: '#06b6d4',
+    bgColor: '#ecfeff',
+    borderColor: '#67e8f9',
     priority: 'medium'
   },
   'toilet_clean': { 
@@ -44,6 +45,7 @@ const requestConfig = {
     label: 'Restroom Issue',
     color: '#ef4444',
     bgColor: '#fef2f2',
+    borderColor: '#fca5a5',
     priority: 'high'
   },
   'ready_to_order': { 
@@ -51,6 +53,7 @@ const requestConfig = {
     label: 'Ready to Order',
     color: '#10b981',
     bgColor: '#ecfdf5',
+    borderColor: '#6ee7b7',
     priority: 'high'
   },
   'additional_order': { 
@@ -58,6 +61,7 @@ const requestConfig = {
     label: 'Additional Order',
     color: '#f59e0b',
     bgColor: '#fffbeb',
+    borderColor: '#fcd34d',
     priority: 'medium'
   },
   'replace_cutlery': { 
@@ -65,13 +69,15 @@ const requestConfig = {
     label: 'Cutlery Request',
     color: '#8b5cf6',
     bgColor: '#f5f3ff',
+    borderColor: '#c4b5fd',
     priority: 'low'
   },
   'request_sauces': { 
     icon: '🥫', 
     label: 'Condiments',
-    color: '#06b6d4',
-    bgColor: '#ecfeff',
+    color: '#ec4899',
+    bgColor: '#fdf2f8',
+    borderColor: '#f9a8d4',
     priority: 'low'
   }
 }
@@ -80,21 +86,21 @@ const statusConfig = {
   'pending': { 
     color: '#f59e0b', 
     bg: '#fffbeb', 
-    border: '#fed7aa',
+    border: '#fcd34d',
     icon: '⏳',
     label: 'Pending'
   },
   'in_progress': { 
     color: '#3b82f6', 
     bg: '#eff6ff', 
-    border: '#bfdbfe',
+    border: '#93c5fd',
     icon: '🔄',
     label: 'In Progress'
   },
   'completed': { 
     color: '#10b981', 
     bg: '#ecfdf5', 
-    border: '#a7f3d0',
+    border: '#6ee7b7',
     icon: '✅',
     label: 'Completed'
   }
@@ -109,6 +115,8 @@ export default function StaffRequestsPage() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'split' | 'list' | 'layout'>('split')
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -123,7 +131,6 @@ export default function StaffRequestsPage() {
 
   const fetchData = async () => {
     try {
-      // Fetch requests with table positions
       const { data: requestsData, error: requestsError } = await supabase
         .from('requests')
         .select(`
@@ -144,7 +151,6 @@ export default function StaffRequestsPage() {
       if (requestsError) throw requestsError
       setRequests(requestsData || [])
 
-      // Fetch all tables with positions
       const { data: tablesData, error: tablesError } = await supabase
         .from('tables')
         .select('*')
@@ -152,7 +158,6 @@ export default function StaffRequestsPage() {
 
       if (tablesError) throw tablesError
 
-      // Process tables with request counts
       const processedTables: TableWithRequests[] = tablesData.map(table => {
         const tableRequests = requestsData.filter(req => 
           req.tables.id === table.id && 
@@ -202,6 +207,32 @@ export default function StaffRequestsPage() {
       fetchData()
     } catch (error) {
       console.error('Error updating request:', error)
+    }
+  }
+
+  const resetAllRequests = async () => {
+    setResetting(true)
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all (this condition is always true)
+
+      if (error) throw error
+      
+      setShowResetModal(false)
+      fetchData()
+      
+      // Show success message briefly
+      setTimeout(() => {
+        alert('✅ All requests cleared successfully!')
+      }, 500)
+      
+    } catch (error) {
+      console.error('Error resetting requests:', error)
+      alert('❌ Error clearing requests. Please try again.')
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -262,7 +293,7 @@ export default function StaffRequestsPage() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -273,13 +304,13 @@ export default function StaffRequestsPage() {
           backgroundColor: 'white',
           padding: '48px',
           borderRadius: '24px',
-          boxShadow: '0 25px 50px rgba(0,0,0,0.08)'
+          boxShadow: '0 25px 50px rgba(0,0,0,0.15)'
         }}>
           <div style={{
             width: '48px',
             height: '48px',
             border: '4px solid #e5e7eb',
-            borderTop: '4px solid #3b82f6',
+            borderTop: '4px solid #667eea',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 24px'
@@ -308,8 +339,8 @@ export default function StaffRequestsPage() {
         }
         
         @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.9; transform: scale(1.05); }
         }
         
         @keyframes fadeIn {
@@ -328,13 +359,25 @@ export default function StaffRequestsPage() {
           }
         }
         
+        @keyframes rainbow {
+          0% { border-color: #ef4444; }
+          16% { border-color: #f59e0b; }
+          33% { border-color: #10b981; }
+          50% { border-color: #3b82f6; }
+          66% { border-color: #8b5cf6; }
+          83% { border-color: #ec4899; }
+          100% { border-color: #ef4444; }
+        }
+        
         .request-card {
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          border: 2px solid transparent;
         }
         
         .request-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+          transform: translateY(-4px);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+          animation: rainbow 2s linear infinite;
         }
         
         .table-circle {
@@ -343,20 +386,41 @@ export default function StaffRequestsPage() {
         }
         
         .table-circle:hover {
-          transform: scale(1.1);
+          transform: scale(1.15);
         }
         
         .table-circle.urgent {
           animation: urgentPulse 2s infinite;
         }
         
-        .photo-modal {
+        .stat-card {
+          transition: all 0.3s ease;
+          border: 2px solid transparent;
+        }
+        
+        .stat-card:hover {
+          transform: translateY(-2px) scale(1.02);
+          border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .reset-button {
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          transition: all 0.3s ease;
+        }
+        
+        .reset-button:hover {
+          background: linear-gradient(135deg, #dc2626, #b91c1c);
+          transform: scale(1.05);
+          box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+        }
+        
+        .modal-overlay {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.9);
+          background: rgba(0, 0, 0, 0.8);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -365,55 +429,21 @@ export default function StaffRequestsPage() {
           animation: fadeIn 0.3s ease-out;
         }
         
-        .photo-container {
-          position: relative;
-          max-width: 90vw;
-          max-height: 90vh;
+        .modal-content {
           background: white;
-          border-radius: 16px;
-          overflow: hidden;
+          border-radius: 20px;
+          padding: 32px;
+          max-width: 400px;
+          width: 100%;
+          text-align: center;
+          animation: slideIn 0.4s ease-out;
           box-shadow: 0 25px 50px rgba(0,0,0,0.25);
-          display: flex;
-          flex-direction: column;
-        }
-        
-        .photo-header {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-          color: white;
-          padding: 20px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        
-        .close-button {
-          background: rgba(255, 255, 255, 0.2);
-          border: none;
-          color: white;
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 18px;
-          transition: all 0.2s ease;
-        }
-        
-        .close-button:hover {
-          background: rgba(255, 255, 255, 0.3);
-          transform: scale(1.1);
         }
       `}</style>
 
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         padding: '24px'
       }}>
@@ -421,12 +451,13 @@ export default function StaffRequestsPage() {
           
           {/* Header */}
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
             borderRadius: '24px',
             padding: '32px',
             marginBottom: '24px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.04)',
-            border: '1px solid rgba(226,232,240,0.8)'
+            boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+            border: '1px solid rgba(255,255,255,0.2)'
           }}>
             <div style={{ 
               display: 'flex', 
@@ -437,15 +468,15 @@ export default function StaffRequestsPage() {
             }}>
               <div>
                 <h1 style={{ 
-                  fontSize: '32px', 
+                  fontSize: '36px', 
                   fontWeight: '700', 
                   margin: '0 0 8px 0', 
-                  background: 'linear-gradient(135deg, #1f2937, #4b5563)',
+                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text'
                 }}>
-                  Staff Dashboard
+                  🏪 Staff Dashboard
                 </h1>
                 <p style={{ 
                   color: '#6b7280', 
@@ -455,62 +486,84 @@ export default function StaffRequestsPage() {
                   alignItems: 'center',
                   gap: '8px'
                 }}>
-                  <span>🔴 Live</span>
-                  Last updated: {lastRefresh.toLocaleTimeString()}
+                  <span style={{ color: '#10b981' }}>🟢 Live</span>
+                  Updated: {lastRefresh.toLocaleTimeString()}
                 </p>
               </div>
               
-              {/* View Mode Toggle */}
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                backgroundColor: '#f1f5f9',
-                padding: '4px',
-                borderRadius: '12px'
-              }}>
-                {[
-                  { key: 'split', label: '📊 Split View', icon: '📊' },
-                  { key: 'list', label: '📋 List Only', icon: '📋' },
-                  { key: 'layout', label: '🗺️ Layout Only', icon: '🗺️' }
-                ].map((mode) => (
-                  <button
-                    key={mode.key}
-                    onClick={() => setViewMode(mode.key as any)}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: viewMode === mode.key ? '#3b82f6' : 'transparent',
-                      color: viewMode === mode.key ? 'white' : '#64748b',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {mode.icon}
-                  </button>
-                ))}
-              </div>
-
-              {stats.urgent > 0 && (
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* View Mode Toggle */}
                 <div style={{
-                  backgroundColor: '#fef2f2',
-                  color: '#dc2626',
-                  padding: '12px 20px',
+                  display: 'flex',
+                  gap: '4px',
+                  backgroundColor: 'rgba(255,255,255,0.8)',
+                  padding: '4px',
                   borderRadius: '12px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  border: '1px solid #fecaca',
-                  animation: 'pulse 2s infinite'
+                  border: '1px solid rgba(255,255,255,0.3)'
                 }}>
-                  🚨 {stats.urgent} Urgent Request{stats.urgent !== 1 ? 's' : ''}
+                  {[
+                    { key: 'split', icon: '📊' },
+                    { key: 'list', icon: '📋' },
+                    { key: 'layout', icon: '🗺️' }
+                  ].map((mode) => (
+                    <button
+                      key={mode.key}
+                      onClick={() => setViewMode(mode.key as any)}
+                      style={{
+                        padding: '8px 12px',
+                        backgroundColor: viewMode === mode.key ? '#667eea' : 'transparent',
+                        color: viewMode === mode.key ? 'white' : '#64748b',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {mode.icon}
+                    </button>
+                  ))}
                 </div>
-              )}
+
+                {/* Reset Button */}
+                <button
+                  onClick={() => setShowResetModal(true)}
+                  className="reset-button"
+                  style={{
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '12px 20px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  🗑️ Clear All
+                </button>
+
+                {stats.urgent > 0 && (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    color: 'white',
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    animation: 'pulse 2s infinite',
+                    boxShadow: '0 8px 25px rgba(239, 68, 68, 0.4)'
+                  }}>
+                    🚨 {stats.urgent} URGENT
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Stats Grid */}
+          {/* Enhanced Stats Grid */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -518,48 +571,51 @@ export default function StaffRequestsPage() {
             marginBottom: '32px'
           }}>
             {[
-              { label: 'Urgent', count: stats.urgent, color: '#ef4444', bg: '#fef2f2', icon: '🚨' },
-              { label: 'Pending', count: stats.pending, color: '#f59e0b', bg: '#fffbeb', icon: '⏳' },
-              { label: 'In Progress', count: stats.inProgress, color: '#3b82f6', bg: '#eff6ff', icon: '🔄' },
-              { label: 'Completed', count: stats.completed, color: '#10b981', bg: '#ecfdf5', icon: '✅' },
-              { label: 'Total', count: stats.total, color: '#6b7280', bg: '#f9fafb', icon: '📊' }
+              { label: 'Urgent', count: stats.urgent, gradient: 'linear-gradient(135deg, #ef4444, #dc2626)', icon: '🚨' },
+              { label: 'Pending', count: stats.pending, gradient: 'linear-gradient(135deg, #f59e0b, #d97706)', icon: '⏳' },
+              { label: 'Active', count: stats.inProgress, gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)', icon: '🔄' },
+              { label: 'Done Today', count: stats.completed, gradient: 'linear-gradient(135deg, #10b981, #059669)', icon: '✅' },
+              { label: 'Total', count: stats.total, gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', icon: '📊' }
             ].map((stat, index) => (
-              <div key={stat.label} style={{
-                backgroundColor: 'white',
-                borderRadius: '20px',
-                padding: '24px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.04)',
-                border: '1px solid rgba(226,232,240,0.8)',
-                animation: `slideIn 0.6s ease-out ${index * 0.1}s both`
-              }}>
+              <div 
+                key={stat.label} 
+                className="stat-card"
+                style={{
+                  background: stat.gradient,
+                  borderRadius: '20px',
+                  padding: '28px 24px',
+                  color: 'white',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                  animation: `slideIn 0.6s ease-out ${index * 0.1}s both`
+                }}
+              >
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  marginBottom: '8px'
+                  marginBottom: '12px'
                 }}>
                   <div style={{
-                    fontSize: '28px',
-                    fontWeight: '700',
-                    color: stat.color
+                    fontSize: '32px',
+                    fontWeight: '700'
                   }}>
                     {stat.count}
                   </div>
                   <div style={{
-                    fontSize: '20px',
-                    backgroundColor: stat.bg,
-                    padding: '6px',
-                    borderRadius: '10px'
+                    fontSize: '24px',
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    padding: '8px',
+                    borderRadius: '12px'
                   }}>
                     {stat.icon}
                   </div>
                 </div>
                 <div style={{
-                  fontSize: '13px',
+                  fontSize: '14px',
                   fontWeight: '600',
-                  color: '#374151',
                   textTransform: 'uppercase' as const,
-                  letterSpacing: '0.5px'
+                  letterSpacing: '0.5px',
+                  opacity: 0.9
                 }}>
                   {stat.label}
                 </div>
@@ -578,10 +634,11 @@ export default function StaffRequestsPage() {
             {/* Requests List */}
             {(viewMode === 'split' || viewMode === 'list') && (
               <div style={{
-                backgroundColor: 'white',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(20px)',
                 borderRadius: '24px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.04)',
-                border: '1px solid rgba(226,232,240,0.8)',
+                boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(255,255,255,0.2)',
                 overflow: 'hidden'
               }}>
                 {/* Filter Tabs */}
@@ -595,36 +652,37 @@ export default function StaffRequestsPage() {
                     flexWrap: 'wrap' as const
                   }}>
                     {[
-                      { key: 'all', label: 'All', count: stats.total },
-                      { key: 'pending', label: 'Pending', count: stats.pending },
-                      { key: 'in_progress', label: 'In Progress', count: stats.inProgress },
-                      { key: 'completed', label: 'Completed', count: stats.completed }
+                      { key: 'all', label: 'All', count: stats.total, color: '#8b5cf6' },
+                      { key: 'pending', label: 'Pending', count: stats.pending, color: '#f59e0b' },
+                      { key: 'in_progress', label: 'Active', count: stats.inProgress, color: '#3b82f6' },
+                      { key: 'completed', label: 'Done', count: stats.completed, color: '#10b981' }
                     ].map((tab) => (
                       <button
                         key={tab.key}
                         onClick={() => setFilter(tab.key)}
                         style={{
-                          padding: '10px 16px',
-                          borderRadius: '10px',
+                          padding: '12px 18px',
+                          borderRadius: '12px',
                           border: 'none',
                           fontSize: '14px',
                           fontWeight: '600',
                           cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          backgroundColor: filter === tab.key ? '#3b82f6' : '#f8fafc',
+                          transition: 'all 0.3s ease',
+                          backgroundColor: filter === tab.key ? tab.color : 'rgba(0,0,0,0.05)',
                           color: filter === tab.key ? 'white' : '#6b7280',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px'
+                          gap: '6px',
+                          boxShadow: filter === tab.key ? `0 4px 15px ${tab.color}40` : 'none'
                         }}
                       >
                         {tab.label}
                         {tab.count > 0 && (
                           <span style={{
-                            backgroundColor: filter === tab.key ? 'rgba(255,255,255,0.2)' : '#e2e8f0',
-                            color: filter === tab.key ? 'white' : '#374151',
-                            padding: '2px 6px',
-                            borderRadius: '6px',
+                            backgroundColor: filter === tab.key ? 'rgba(255,255,255,0.25)' : tab.color,
+                            color: filter === tab.key ? 'white' : 'white',
+                            padding: '2px 8px',
+                            borderRadius: '8px',
                             fontSize: '12px',
                             fontWeight: '700'
                           }}>
@@ -637,8 +695,8 @@ export default function StaffRequestsPage() {
 
                   {selectedTable && (
                     <div style={{
-                      backgroundColor: '#f0f9ff',
-                      border: '1px solid #bae6fd',
+                      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                      color: 'white',
                       borderRadius: '12px',
                       padding: '12px 16px',
                       marginBottom: '20px',
@@ -648,20 +706,20 @@ export default function StaffRequestsPage() {
                     }}>
                       <div style={{
                         fontSize: '14px',
-                        color: '#0369a1',
                         fontWeight: '600'
                       }}>
-                        🎯 Filtered by: Table {tables.find(t => t.id === selectedTable)?.label}
+                        🎯 Table {tables.find(t => t.id === selectedTable)?.label}
                       </div>
                       <button
                         onClick={() => setSelectedTable(null)}
                         style={{
-                          background: 'none',
+                          background: 'rgba(255,255,255,0.2)',
                           border: 'none',
-                          color: '#0369a1',
+                          color: 'white',
                           cursor: 'pointer',
                           fontSize: '16px',
-                          padding: '4px'
+                          padding: '4px 8px',
+                          borderRadius: '6px'
                         }}
                       >
                         ✕
@@ -673,20 +731,25 @@ export default function StaffRequestsPage() {
                 <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
                   {getFilteredRequests().length === 0 ? (
                     <div style={{ padding: '60px 40px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '48px', marginBottom: '16px' }}>
-                        {selectedTable ? '🎯' : filter === 'pending' ? '⏳' : filter === 'in_progress' ? '🔄' : filter === 'completed' ? '🎉' : '📋'}
+                      <div style={{ fontSize: '64px', marginBottom: '20px' }}>
+                        {selectedTable ? '🎯' : filter === 'pending' ? '⏳' : filter === 'in_progress' ? '🔄' : filter === 'completed' ? '🎉' : '✨'}
                       </div>
                       <h3 style={{
-                        fontSize: '20px',
+                        fontSize: '24px',
                         fontWeight: '600',
-                        color: '#374151',
-                        margin: '0 0 8px 0'
+                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        margin: '0 0 12px 0'
                       }}>
                         {selectedTable 
-                          ? `No ${filter === 'all' ? '' : filter + ' '}requests for this table`
-                          : filter === 'all' ? 'No requests yet' : `No ${filter.replace('_', ' ')} requests`
+                          ? `No requests for Table ${tables.find(t => t.id === selectedTable)?.label}`
+                          : filter === 'all' ? 'All Clear! ✨' : `No ${filter.replace('_', ' ')} requests`
                         }
                       </h3>
+                      <p style={{ color: '#6b7280', fontSize: '16px', margin: 0 }}>
+                        {filter === 'all' ? 'When customers make requests, they\'ll appear here!' : 'Great job staying on top of things!'}
+                      </p>
                     </div>
                   ) : (
                     getFilteredRequests().map((request, index) => {
@@ -698,37 +761,40 @@ export default function StaffRequestsPage() {
                           key={request.id}
                           className="request-card"
                           style={{
-                            padding: '20px 32px',
-                            borderBottom: index < getFilteredRequests().length - 1 ? '1px solid #f3f4f6' : 'none',
-                            animation: `slideIn 0.4s ease-out ${index * 0.05}s both`
+                            padding: '24px 32px',
+                            borderBottom: index < getFilteredRequests().length - 1 ? '2px solid #f8fafc' : 'none',
+                            background: config?.bgColor || '#f9fafb',
+                            animation: `slideIn 0.5s ease-out ${index * 0.1}s both`
                           }}
                         >
                           <div style={{
                             display: 'flex',
                             alignItems: 'flex-start',
                             justifyContent: 'space-between',
-                            gap: '16px'
+                            gap: '20px'
                           }}>
                             
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '10px',
-                                marginBottom: '10px',
+                                gap: '12px',
+                                marginBottom: '12px',
                                 flexWrap: 'wrap' as const
                               }}>
                                 <div style={{
-                                  backgroundColor: config?.bgColor || '#f3f4f6',
-                                  padding: '6px',
-                                  borderRadius: '10px',
-                                  fontSize: '16px'
+                                  backgroundColor: config?.color || '#6b7280',
+                                  color: 'white',
+                                  padding: '10px',
+                                  borderRadius: '12px',
+                                  fontSize: '18px',
+                                  boxShadow: `0 4px 15px ${config?.color || '#6b7280'}40`
                                 }}>
                                   {config?.icon || '📋'}
                                 </div>
                                 
                                 <div style={{
-                                  fontSize: '16px',
+                                  fontSize: '18px',
                                   fontWeight: '600',
                                   color: '#1f2937'
                                 }}>
@@ -736,32 +802,33 @@ export default function StaffRequestsPage() {
                                 </div>
                                 
                                 <div style={{
-                                  padding: '4px 10px',
-                                  borderRadius: '10px',
-                                  fontSize: '11px',
+                                  padding: '6px 12px',
+                                  borderRadius: '20px',
+                                  fontSize: '12px',
                                   fontWeight: '600',
-                                  backgroundColor: statusStyle.bg,
-                                  color: statusStyle.color,
-                                  border: `1px solid ${statusStyle.border}`,
+                                  backgroundColor: statusStyle.color,
+                                  color: 'white',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '3px'
+                                  gap: '4px',
+                                  boxShadow: `0 4px 15px ${statusStyle.color}40`
                                 }}>
                                   {statusStyle.icon} {statusStyle.label}
                                 </div>
                                 
                                 {config?.priority === 'high' && request.status === 'pending' && (
                                   <div style={{
-                                    backgroundColor: '#fef2f2',
-                                    color: '#dc2626',
-                                    padding: '3px 6px',
-                                    borderRadius: '6px',
+                                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                                    color: 'white',
+                                    padding: '4px 10px',
+                                    borderRadius: '12px',
                                     fontSize: '10px',
                                     fontWeight: '700',
                                     textTransform: 'uppercase' as const,
-                                    animation: 'pulse 2s infinite'
+                                    animation: 'pulse 2s infinite',
+                                    boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)'
                                   }}>
-                                    URGENT
+                                    🚨 URGENT
                                   </div>
                                 )}
 
@@ -772,17 +839,25 @@ export default function StaffRequestsPage() {
                                       background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
                                       color: 'white',
                                       border: 'none',
-                                      padding: '4px 8px',
-                                      borderRadius: '6px',
-                                      fontSize: '11px',
+                                      padding: '6px 12px',
+                                      borderRadius: '10px',
+                                      fontSize: '12px',
                                       fontWeight: '600',
                                       cursor: 'pointer',
                                       display: 'flex',
                                       alignItems: 'center',
-                                      gap: '3px'
+                                      gap: '4px',
+                                      boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseOver={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1.05)'
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1)'
                                     }}
                                   >
-                                    📸
+                                    📸 Photo
                                   </button>
                                 )}
                               </div>
@@ -790,21 +865,28 @@ export default function StaffRequestsPage() {
                               <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '12px',
-                                fontSize: '13px',
+                                gap: '16px',
+                                fontSize: '14px',
                                 color: '#6b7280',
-                                marginBottom: '6px'
+                                marginBottom: '8px',
+                                fontWeight: '500'
                               }}>
-                                <span>🏪 {request.tables.restaurants.name}</span>
-                                <span>📍 Table {request.tables.label}</span>
-                                <span>⏰ {getTimeAgo(request.created_at)}</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  🏪 {request.tables.restaurants.name}
+                                </span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  📍 Table {request.tables.label}
+                                </span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  ⏰ {getTimeAgo(request.created_at)}
+                                </span>
                               </div>
                             </div>
 
-                            {/* Action Buttons */}
+                            {/* Enhanced Action Buttons */}
                             <div style={{
                               display: 'flex',
-                              gap: '6px',
+                              gap: '8px',
                               flexShrink: 0,
                               flexWrap: 'wrap' as const
                             }}>
@@ -813,14 +895,22 @@ export default function StaffRequestsPage() {
                                   <button
                                     onClick={() => updateRequestStatus(request.id, 'in_progress')}
                                     style={{
-                                      padding: '8px 12px',
-                                      backgroundColor: '#3b82f6',
+                                      padding: '10px 16px',
+                                      background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
                                       color: 'white',
                                       border: 'none',
-                                      borderRadius: '8px',
-                                      fontSize: '12px',
+                                      borderRadius: '12px',
+                                      fontSize: '13px',
                                       fontWeight: '600',
-                                      cursor: 'pointer'
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                                    }}
+                                    onMouseOver={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1.05)'
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1)'
                                     }}
                                   >
                                     🔄 Start
@@ -828,14 +918,22 @@ export default function StaffRequestsPage() {
                                   <button
                                     onClick={() => updateRequestStatus(request.id, 'completed')}
                                     style={{
-                                      padding: '8px 12px',
-                                      backgroundColor: '#10b981',
+                                      padding: '10px 16px',
+                                      background: 'linear-gradient(135deg, #10b981, #059669)',
                                       color: 'white',
                                       border: 'none',
-                                      borderRadius: '8px',
-                                      fontSize: '12px',
+                                      borderRadius: '12px',
+                                      fontSize: '13px',
                                       fontWeight: '600',
-                                      cursor: 'pointer'
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)'
+                                    }}
+                                    onMouseOver={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1.05)'
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.transform = 'scale(1)'
                                     }}
                                   >
                                     ✅ Done
@@ -847,14 +945,22 @@ export default function StaffRequestsPage() {
                                 <button
                                   onClick={() => updateRequestStatus(request.id, 'completed')}
                                   style={{
-                                    padding: '8px 12px',
-                                    backgroundColor: '#10b981',
+                                    padding: '10px 16px',
+                                    background: 'linear-gradient(135deg, #10b981, #059669)',
                                     color: 'white',
                                     border: 'none',
-                                    borderRadius: '8px',
-                                    fontSize: '12px',
+                                    borderRadius: '12px',
+                                    fontSize: '13px',
                                     fontWeight: '600',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1.05)'
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1)'
                                   }}
                                 >
                                   ✅ Complete
@@ -865,14 +971,22 @@ export default function StaffRequestsPage() {
                                 <button
                                   onClick={() => updateRequestStatus(request.id, 'pending')}
                                   style={{
-                                    padding: '8px 12px',
-                                    backgroundColor: '#6b7280',
+                                    padding: '10px 16px',
+                                    background: 'linear-gradient(135deg, #6b7280, #4b5563)',
                                     color: 'white',
                                     border: 'none',
-                                    borderRadius: '8px',
-                                    fontSize: '12px',
+                                    borderRadius: '12px',
+                                    fontSize: '13px',
                                     fontWeight: '600',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 4px 15px rgba(107, 114, 128, 0.4)'
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1.05)'
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1)'
                                   }}
                                 >
                                   🔄 Reopen
@@ -888,25 +1002,26 @@ export default function StaffRequestsPage() {
               </div>
             )}
 
-            {/* Restaurant Layout View */}
+            {/* Enhanced Restaurant Layout View */}
             {(viewMode === 'split' || viewMode === 'layout') && (
               <div style={{
-                backgroundColor: 'white',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(20px)',
                 borderRadius: '24px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.04)',
-                border: '1px solid rgba(226,232,240,0.8)',
+                boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+                border: '1px solid rgba(255,255,255,0.2)',
                 overflow: 'hidden'
               }}>
                 <div style={{
                   padding: '24px 32px',
-                  borderBottom: '1px solid #e5e7eb',
-                  backgroundColor: '#f9fafb'
+                  borderBottom: '2px solid #f8fafc',
+                  background: 'linear-gradient(135deg, #667eea, #764ba2)'
                 }}>
                   <h2 style={{
                     margin: 0,
-                    fontSize: '20px',
+                    fontSize: '22px',
                     fontWeight: '600',
-                    color: '#374151',
+                    color: 'white',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px'
@@ -916,13 +1031,12 @@ export default function StaffRequestsPage() {
                     {selectedTable && (
                       <span style={{
                         fontSize: '14px',
-                        backgroundColor: '#dbeafe',
-                        color: '#1e40af',
-                        padding: '4px 12px',
-                        borderRadius: '8px',
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        padding: '6px 12px',
+                        borderRadius: '12px',
                         fontWeight: '500'
                       }}>
-                        Table {tables.find(t => t.id === selectedTable)?.label} Selected
+                        Table {tables.find(t => t.id === selectedTable)?.label}
                       </span>
                     )}
                   </h2>
@@ -933,74 +1047,80 @@ export default function StaffRequestsPage() {
                   padding: '32px',
                   minHeight: '500px',
                   position: 'relative',
-                  backgroundColor: '#fafbfc'
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
                 }}>
-                  {/* Legend */}
+                  {/* Enhanced Legend */}
                   <div style={{
                     position: 'absolute',
                     top: '20px',
                     right: '20px',
                     backgroundColor: 'white',
-                    padding: '16px',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    border: '1px solid #e5e7eb',
-                    fontSize: '12px',
-                    zIndex: 10
+                    padding: '20px',
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                    border: '2px solid rgba(255,255,255,0.5)',
+                    fontSize: '13px',
+                    zIndex: 10,
+                    backdropFilter: 'blur(10px)'
                   }}>
-                    <div style={{ fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
-                      Table Status
+                    <div style={{ fontWeight: '700', marginBottom: '12px', color: '#374151', fontSize: '14px' }}>
+                      🎯 Table Status
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{
-                          width: '12px',
-                          height: '12px',
+                          width: '16px',
+                          height: '16px',
                           borderRadius: '50%',
-                          backgroundColor: '#10b981'
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)'
                         }}></div>
-                        <span style={{ color: '#6b7280' }}>No requests</span>
+                        <span style={{ color: '#374151', fontWeight: '500' }}>All Good</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{
-                          width: '12px',
-                          height: '12px',
+                          width: '16px',
+                          height: '16px',
                           borderRadius: '50%',
-                          backgroundColor: '#f59e0b'
+                          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                          boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)'
                         }}></div>
-                        <span style={{ color: '#6b7280' }}>Pending request</span>
+                        <span style={{ color: '#374151', fontWeight: '500' }}>Needs Attention</span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{
-                          width: '12px',
-                          height: '12px',
+                          width: '16px',
+                          height: '16px',
                           borderRadius: '50%',
-                          backgroundColor: '#ef4444'
+                          background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                          boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)',
+                          animation: 'pulse 2s infinite'
                         }}></div>
-                        <span style={{ color: '#6b7280' }}>Urgent</span>
+                        <span style={{ color: '#374151', fontWeight: '500' }}>URGENT!</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Kitchen/Bar Area (Example) */}
+                  {/* Kitchen/Bar Area */}
                   <div style={{
                     position: 'absolute',
                     top: '32px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    width: '200px',
+                    width: '240px',
                     height: '80px',
-                    backgroundColor: '#f3f4f6',
-                    border: '2px dashed #9ca3af',
-                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderRadius: '16px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#6b7280'
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: 'white',
+                    boxShadow: '0 10px 25px rgba(139, 92, 246, 0.4)'
                   }}>
-                    🍳 Kitchen / Bar
+                    👨‍🍳 Kitchen & Bar
                   </div>
 
                   {/* Tables */}
@@ -1012,45 +1132,54 @@ export default function StaffRequestsPage() {
                       style={{
                         position: 'absolute',
                         left: `${table.x_position}px`,
-                        top: `${table.y_position + 120}px`, // Offset for kitchen area
-                        width: '60px',
-                        height: '60px',
+                        top: `${table.y_position + 140}px`,
+                        width: '70px',
+                        height: '70px',
                         borderRadius: '50%',
-                        backgroundColor: getTableBgColor(table),
-                        border: `3px solid ${getTableColor(table)}`,
+                        background: selectedTable === table.id 
+                          ? 'linear-gradient(135deg, #667eea, #764ba2)'
+                          : table.status === 'urgent'
+                            ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                            : table.status === 'pending'
+                              ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                              : 'linear-gradient(135deg, #10b981, #059669)',
+                        border: `3px solid ${selectedTable === table.id ? '#4c51bf' : 'white'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '16px',
+                        fontSize: '18px',
                         fontWeight: '700',
-                        color: getTableColor(table),
+                        color: 'white',
                         boxShadow: selectedTable === table.id 
-                          ? `0 0 0 4px ${getTableColor(table)}40` 
-                          : '0 4px 8px rgba(0,0,0,0.1)',
+                          ? '0 0 0 4px rgba(102, 126, 234, 0.3), 0 10px 25px rgba(0,0,0,0.2)' 
+                          : `0 8px 20px ${getTableColor(table)}40`,
                         animation: `slideIn 0.6s ease-out ${index * 0.1}s both`,
                         zIndex: selectedTable === table.id ? 5 : 1
                       }}
                     >
                       {table.label}
                       
-                      {/* Active requests indicator */}
+                      {/* Enhanced Active requests indicator */}
                       {table.activeRequests.length > 0 && (
                         <div style={{
                           position: 'absolute',
-                          top: '-5px',
-                          right: '-5px',
-                          width: '20px',
-                          height: '20px',
-                          backgroundColor: table.status === 'urgent' ? '#dc2626' : '#f59e0b',
+                          top: '-8px',
+                          right: '-8px',
+                          width: '28px',
+                          height: '28px',
+                          background: table.status === 'urgent' 
+                            ? 'linear-gradient(135deg, #dc2626, #b91c1c)' 
+                            : 'linear-gradient(135deg, #f59e0b, #d97706)',
                           color: 'white',
                           borderRadius: '50%',
-                          fontSize: '11px',
+                          fontSize: '12px',
                           fontWeight: '700',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          border: '2px solid white',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          border: '3px solid white',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                          animation: table.status === 'urgent' ? 'pulse 1.5s infinite' : 'none'
                         }}>
                           {table.activeRequests.length}
                         </div>
@@ -1064,19 +1193,20 @@ export default function StaffRequestsPage() {
                     bottom: '20px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    width: '120px',
-                    height: '40px',
-                    backgroundColor: '#e0f2fe',
-                    border: '2px solid #0891b2',
-                    borderRadius: '8px',
+                    width: '160px',
+                    height: '50px',
+                    background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderRadius: '12px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: '#0891b2'
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: 'white',
+                    boxShadow: '0 8px 20px rgba(6, 182, 212, 0.4)'
                   }}>
-                    🚪 Entrance
+                    🚪 Main Entrance
                   </div>
                 </div>
               </div>
@@ -1085,22 +1215,126 @@ export default function StaffRequestsPage() {
         </div>
       </div>
 
-      {/* Photo Modal */}
+      {/* Reset Confirmation Modal */}
+      {showResetModal && (
+        <div className="modal-overlay" onClick={() => setShowResetModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>🗑️</div>
+            <h3 style={{ 
+              fontSize: '24px', 
+              fontWeight: '700', 
+              margin: '0 0 12px 0',
+              color: '#1f2937'
+            }}>
+              Clear All Requests?
+            </h3>
+            <p style={{ 
+              color: '#6b7280', 
+              margin: '0 0 24px 0',
+              fontSize: '16px',
+              lineHeight: '1.5'
+            }}>
+              This will permanently delete all requests from the system. This action cannot be undone.
+            </p>
+            
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={resetAllRequests}
+                disabled={resetting}
+                style={{
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '14px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: resetting ? 'not-allowed' : 'pointer',
+                  opacity: resetting ? 0.7 : 1,
+                  boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)'
+                }}
+              >
+                {resetting ? '🔄 Clearing...' : '🗑️ Yes, Clear All'}
+              </button>
+              
+              <button
+                onClick={() => setShowResetModal(false)}
+                style={{
+                  backgroundColor: '#f8fafc',
+                  color: '#374151',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '14px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Photo Modal */}
       {selectedPhoto && (
-        <div className="photo-modal" onClick={() => setSelectedPhoto(null)}>
-          <div className="photo-container" onClick={(e) => e.stopPropagation()}>
-            <div className="photo-header">
+        <div className="modal-overlay" onClick={() => setSelectedPhoto(null)}>
+          <div style={{
+            position: 'relative',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            backgroundColor: 'white',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+            display: 'flex',
+            flexDirection: 'column'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              color: 'white',
+              padding: '20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
               <div>
                 <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '600' }}>
                   🚽 Restroom Issue Photo
                 </h3>
                 <p style={{ margin: 0, fontSize: '14px', opacity: 0.9 }}>
-                  Pinch to zoom • Click outside to close
+                  Evidence provided by customer
                 </p>
               </div>
               <button
-                className="close-button"
                 onClick={() => setSelectedPhoto(null)}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  color: 'white',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+                  e.currentTarget.style.transform = 'scale(1.1)'
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+                  e.currentTarget.style.transform = 'scale(1)'
+                }}
               >
                 ✕
               </button>
@@ -1111,7 +1345,7 @@ export default function StaffRequestsPage() {
               alignItems: 'center',
               justifyContent: 'center',
               padding: '20px',
-              minHeight: '200px'
+              minHeight: '300px'
             }}>
               <img 
                 src={selectedPhoto} 
@@ -1120,8 +1354,8 @@ export default function StaffRequestsPage() {
                   maxWidth: '100%',
                   maxHeight: '100%',
                   objectFit: 'contain',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
                 }}
               />
             </div>
